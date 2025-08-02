@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Orders</title>
+
+  <!-- DataTables & jQuery -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #toggleOrder {
+      display: block;
+      margin: 10px auto;
+      padding: 8px 16px;
+      background: #333;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    #toggleOrder:hover {
+      background: #555;
+    }
+    table.dataTable thead {
+      background: #333;
+      color: white;
+    }
+    .highlight {
+      background-color: #ffe082;
+      animation: fadeOut 5s forwards;
+    }
+    @keyframes fadeOut {
+      from { background-color: #ffe082; }
+      to { background-color: transparent; }
+    }
+    .delete-btn {
+      background: red;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .delete-btn:hover {
+      background: darkred;
+    }
+  </style>
+</head>
+<body>
+  <h1>All Burger Orders</h1>
+  <button id="toggleOrder">Show Oldest First</button>
+
+  <table id="ordersTable" class="display" style="width:100%">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Burger</th>
+        <th>Quantity</th>
+        <th>Address</th>
+        <th>Phone</th>
+        <th>Message</th>
+        <th>Order Date</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script>
+    let sortOrder = "DESC";
+    let lastSeenIds = [];
+    let table;
+
+    async function fetchOrders() {
+      const res = await fetch(`http://localhost:3000/admin/orders?sort=${sortOrder}`);
+      return res.json();
+    }
+
+    async function deleteOrder(orderId) {
+      if (!confirm("Are you sure you want to delete this order?")) return;
+
+      const res = await fetch(`http://localhost:3000/admin/orders/${orderId}`, {
+        method: "DELETE"
+      });
+
+      if (res.ok) {
+        alert("Order deleted successfully!");
+        loadOrders(); // Refresh table
+      } else {
+        alert("Failed to delete order.");
+      }
+    }
+
+    async function loadOrders() {
+      try {
+        const orders = await fetchOrders();
+        table.clear();
+
+        orders.forEach(order => {
+          const formattedDate = new Date(order.order_date).toLocaleString('en-GB', {
+            day: '2-digit', month: 'long', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+          });
+
+          const deleteButton = `<button class="delete-btn" onclick="deleteOrder(${order.id})">Delete</button>`;
+
+          const rowNode = table.row.add([
+            order.id,
+            order.full_name,
+            order.email,
+            order.burger_type,
+            order.quantity,
+            order.address,
+            order.phone_number,
+            order.message || '',
+            formattedDate,
+            deleteButton
+          ]).draw(false).node();
+
+          if (!lastSeenIds.includes(order.id)) {
+            rowNode.classList.add("highlight");
+          }
+        });
+
+        lastSeenIds = orders.map(o => o.id);
+      } catch (err) {
+        console.error("Error loading orders:", err);
+      }
+    }
+
+    $(document).ready(() => {
+      table = $('#ordersTable').DataTable({
+        paging: true,
+        searching: true,
+        info: true,
+        order: []
+      });
+
+      $('#toggleOrder').on('click', () => {
+        sortOrder = sortOrder === "DESC" ? "ASC" : "DESC";
+        $('#toggleOrder').text(sortOrder === "DESC" ? "Show Oldest First" : "Show Newest First");
+        loadOrders();
+      });
+
+      loadOrders();
+      setInterval(loadOrders, 5000);
+    });
+
+    // Expose deleteOrder globally 
+    window.deleteOrder = deleteOrder;
+  </script>
+</body>
+</html>
