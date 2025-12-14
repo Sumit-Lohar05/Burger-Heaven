@@ -100,9 +100,9 @@ app.post('/verify-payment', (req, res) => {
             .digest('hex');
 
         if (expectedSignature === razorpay_signature) {
-            const sql = `INSERT INTO orders (full_name, email, burger_type, quantity, address, phone_number, message, payment_status, razorpay_order_id, razorpay_payment_id, amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            const sql = `INSERT INTO orders (full_name, email, burger_type, quantity, address, phone_number, message, amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
             
-            db.query(sql, [full_name, email, burger_type, quantity, address, phone_number, message, 'paid', razorpay_order_id, razorpay_payment_id, amount], (err, result) => {
+            db.query(sql, [full_name, email, burger_type, quantity, address, phone_number, message, amount], (err, result) => {
                 if (err) {
                     console.error("SQL Error during verify-payment:", err); 
                     return res.status(500).json({ success: false, error: 'Database error' });
